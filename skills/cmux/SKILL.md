@@ -95,10 +95,19 @@ Convention: `set-status phase <verb>` while working, `set-progress` for anything
 
 ## Orchestrating worker agents
 
-One session acts as controller; workers run visibly in their own workspaces. This is for *visible, terminal-level* parallelism — for invisible parallelism inside one session, use the harness's normal subagents instead.
+One session acts as controller; workers run visibly. This is for *visible, terminal-level* parallelism — for invisible parallelism inside one session, use the harness's normal subagents instead.
+
+**Placement rule — panes first, workspaces second.** A workspace encapsulates one "thing" the user is working on. Workers that fan out from that thing belong in **panes of the caller workspace**, so the user sees all of them at once without clicking around. Reach for a **new workspace** only when the work is genuinely independent of what the user is looking at (its own branch/worktree/repo and lifecycle), or when the fan-out would cramp the pane grid (more than ~4 workers) — and then group related workers into *one* new workspace, not one workspace each.
 
 ```bash
-# 1. Spawn a worker in its own named workspace (one workspace per unit of work / branch / worktree)
+# 1a. Default: fan workers out as panes in the CALLER workspace — all visible at once
+cmux new-pane --workspace "$CMUX_WORKSPACE_ID" --type terminal --direction right --focus false
+cmux new-pane --workspace "$CMUX_WORKSPACE_ID" --type terminal --direction down --focus false
+cmux list-pane-surfaces --workspace "$CMUX_WORKSPACE_ID"   # capture each worker's surface ref
+cmux send --surface surface:12 "cd ~/src/repo-worktree-a && claude --permission-mode acceptEdits"
+cmux send-key --surface surface:12 enter
+
+# 1b. Independent unit of work only: its own named workspace
 cmux new-workspace --name "worker: auth-middleware" --cwd ~/src/repo-worktree-a \
   --command "claude --permission-mode acceptEdits"
 
